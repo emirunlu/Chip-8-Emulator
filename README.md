@@ -12,6 +12,14 @@ You can run it with:
 ./chip8 <ROM file>
 ```
 
+## TODO
+*	Fix SDL implementation
+*	Add audio
+*	Add function keys
+*	Add Super Chip-8 opcodes
+* Use function pointers instead of switch case
+* Improve graphics using filters
+
 ## References
 Some helpful resources I used
 
