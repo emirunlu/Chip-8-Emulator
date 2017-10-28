@@ -7,10 +7,10 @@ SDL_Renderer *renderer = nullptr;
 
 static const uint8_t SCREEN_WIDTH = 64;
 static const uint8_t SCREEN_HEIGHT = 32;
-static const uint8_t PIXEL_SIZE = 12;
+//static const uint8_t PIXEL_SIZE = 12;
 
-// Temporary pixel buffer
-uint32_t pixels[2048];
+// Temporary pixel buffer  CURRENTLY DONT USE MIGHT UPDATE LATER
+// uint32_t pixels[2048];
 
 // Chip8 Keypad
 uint8_t keymap[16] = {
@@ -34,7 +34,8 @@ uint8_t keymap[16] = {
 
 void init_SDL()
 {
-	//Initialize all SDL subsystems
+	// Initialize SDL Video 
+	// TODO: Sound
 	SDL_Init(SDL_INIT_VIDEO);
 
 	window = SDL_CreateWindow("Chip8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 512, 256, NULL);
@@ -64,9 +65,7 @@ load:
 	// Emulation loop
 	while (running) {
 
-
 		// Process SDL events
-
 		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT) exit(0);
 
@@ -133,7 +132,7 @@ load:
 			Chip8.drawFlag = false;
 		}
 		// Sleep to slow down emulation speed
-		std::this_thread::sleep_for(std::chrono::microseconds(1200));
+		//std::this_thread::sleep_for(std::chrono::microseconds(1200));
 	}
 
 	SDL_Quit();
