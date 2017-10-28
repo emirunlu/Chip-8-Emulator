@@ -1,26 +1,13 @@
 #include "chip8.h"
 
-// Display size
-#define SCREEN_WIDTH 64
-#define SCREEN_HEIGHT 32
-
 chip8 Chip8;
-int modifier = 10;
-bool quit = false;
-
-// Window size
-int display_width = SCREEN_WIDTH * modifier;
-int display_height = SCREEN_HEIGHT * modifier;
-
-typedef unsigned __int8 u8;
-u8 screenData[SCREEN_HEIGHT][SCREEN_WIDTH][3];
-
-const unsigned char NCOLORS = 2;
-Uint32 palette[NCOLORS];
 
 SDL_Window *window = nullptr;
-SDL_Texture *sdlTexture = nullptr;
 SDL_Renderer *renderer = nullptr;
+
+static const uint8_t SCREEN_WIDTH = 64;
+static const uint8_t SCREEN_HEIGHT = 32;
+static const uint8_t PIXEL_SIZE = 12;
 
 // Temporary pixel buffer
 uint32_t pixels[2048];
@@ -45,32 +32,19 @@ uint8_t keymap[16] = {
 	SDLK_v,
 };
 
-int init_SDL()
+void init_SDL()
 {
 	//Initialize all SDL subsystems
-	SDL_Init(SDL_INIT_EVERYTHING);
+	SDL_Init(SDL_INIT_VIDEO);
 
-	window = SDL_CreateWindow("Chip8 Emulator", 100, 100, display_width, display_height, SDL_WINDOW_SHOWN);
+	window = SDL_CreateWindow("Chip8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 512, 256, NULL);
 
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-	SDL_RenderSetLogicalSize(renderer, display_width, display_height);
-
-	SDL_Texture* sdlTexture = SDL_CreateTexture(renderer,
-		SDL_PIXELFORMAT_ARGB8888,
-		SDL_TEXTUREACCESS_STREAMING,
-		64, 32);
-
-	return 0;
-}
-
-void stop_SDL()
-{
-	SDL_DestroyWindow(window);
-	SDL_Quit();
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
 }
 
 int main(int argc, char **argv)
 {
+
 	if (argc < 2)
 	{
 		printf("Usage: Chip8.exe chip8application\n\n");
@@ -84,12 +58,15 @@ load:
 	if (!Chip8.loadApplication(argv[1]))
 		return 1;
 
+	SDL_Event e;
+	bool running = true;
+
 	// Emulation loop
-	while (true) {
-		Chip8.emulateCycle();
+	while (running) {
+
 
 		// Process SDL events
-		SDL_Event e;
+
 		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT) exit(0);
 
@@ -118,28 +95,46 @@ load:
 			}
 		}
 
+		Chip8.emulateCycle();
+		
 		// If draw occurred, redraw SDL screen
-		if (Chip8.drawFlag) {
-			Chip8.drawFlag = false;
-
-			// Store pixels in temporary buffer
-			for (int i = 0; i < 2048; ++i) {
-				uint8_t pixel = Chip8.gfx[i];
-				pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
-			}
-			// Update SDL texture
-			SDL_UpdateTexture(sdlTexture, NULL, pixels, 64 * sizeof(Uint32));
-			// Clear screen and render
+		if (Chip8.drawFlag)
+		{
+			// Clear screen
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, sdlTexture, NULL, NULL);
-			SDL_RenderPresent(renderer);
-		}
 
+			// Draw screen
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+			SDL_Rect *destRect = new SDL_Rect;
+			destRect->x = 0;
+			destRect->y = 0;
+			destRect->w = 8;
+			destRect->h = 8;
+
+
+			for (int y = 0; y < 32; y++)
+			{
+				for (int x = 0; x < 64; x++)
+				{
+					if (Chip8.gfx[(y * 64) + x] == 1)
+					{
+						destRect->x = x * 8;
+						destRect->y = y * 8;
+
+						SDL_RenderFillRect(renderer, destRect);
+					}
+				}
+			}
+
+			delete destRect;
+
+			SDL_RenderPresent(renderer);
+			Chip8.drawFlag = false;
+		}
 		// Sleep to slow down emulation speed
 		std::this_thread::sleep_for(std::chrono::microseconds(1200));
-		
 	}
 
-	stop_SDL();
-	return 0;
+	SDL_Quit();
 }

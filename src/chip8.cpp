@@ -22,84 +22,64 @@ unsigned char chip8_fontset[80] =
 	0xF0, 0x80, 0xF0, 0x80, 0x80  //F
 };
 
-chip8::chip8()
-{
+chip8::chip8() {
 
 }
 
-chip8::~chip8()
-{
+chip8::~chip8() {
 
 }
 
-bool chip8::loadApplication(const char * filename)
-{
+bool chip8::loadApplication(const char * filename) {
+	// Initialise
 	init();
-	printf("Loading: %s\n", filename);
 
-	// Open file
-	FILE * pFile = fopen(filename, "rb");
-	if (pFile == NULL)
-	{
-		fputs("File error", stderr);
+	printf("Loading ROM: %s\n", filename);
+
+	// Open ROM file
+	FILE* rom = fopen(filename, "rb");
+	if (rom == NULL) {
+		std::cerr << "Failed to open ROM" << std::endl;
 		return false;
 	}
 
-	// Check file size
-	fseek(pFile, 0, SEEK_END);
-	long lSize = ftell(pFile);
-	rewind(pFile);
-	printf("Filesize: %d\n", (int)lSize);
+	// Get file size
+	fseek(rom, 0, SEEK_END);
+	long rom_size = ftell(rom);
+	rewind(rom);
 
-	// Allocate memory to contain the whole file
-	char * buffer = (char*)malloc(sizeof(char) * lSize);
-	if (buffer == NULL)
-	{
-		fputs("Memory error", stderr);
+	// Allocate memory to store rom
+	char* rom_buffer = (char*)malloc(sizeof(char) * rom_size);
+	if (rom_buffer == NULL) {
+		std::cerr << "Failed to allocate memory for ROM" << std::endl;
 		return false;
 	}
 
-	// Copy the file into the buffer
-	size_t result = fread(buffer, 1, lSize, pFile);
-	if (result != lSize)
-	{
-		fputs("Reading error", stderr);
+	// Copy ROM into buffer
+	size_t result = fread(rom_buffer, sizeof(char), (size_t)rom_size, rom);
+	if (result != rom_size) {
+		std::cerr << "Failed to read ROM" << std::endl;
 		return false;
 	}
 
-	// Copy buffer to Chip8 memory
-	if ((4096 - 512) > lSize)
-	{
-		for (int i = 0; i < lSize; ++i)
-			memory[i + 512] = buffer[i];
+	// Copy buffer to memory
+	if ((4096 - 512) > rom_size) {
+		for (int i = 0; i < rom_size; ++i) {
+			memory[i + 512] = (uint8_t)rom_buffer[i];   // Load into memory starting
+														// at 0x200 (=512)
+		}
 	}
-	else
-		printf("Error: ROM too big for memory");
+	else {
+		std::cerr << "ROM too large to fit in memory" << std::endl;
+		return false;
+	}
 
-	// Close file, free buffer
-	fclose(pFile);
-	free(buffer);
+	// Clean up
+	fclose(rom);
+	free(rom_buffer);
 
 	return true;
 }
-
-void chip8::debugRender()
-{
-	// Draw
-	for (int y = 0; y < 32; ++y)
-	{
-		for (int x = 0; x < 64; ++x)
-		{
-			if (gfx[(y * 64) + x] == 0)
-				printf("O");
-			else
-				printf(" ");
-		}
-		printf("\n");
-	}
-	printf("\n");
-}
-
 
 void chip8::init()
 {
@@ -139,7 +119,7 @@ void chip8::init()
 
 void chip8::emulateCycle()
 {
-	// Fetch opcode
+	// Fetch opcode | 2 bytes
 	opcode = memory[pc] << 8 | memory[pc + 1];
 
 	// Process opcode
@@ -444,7 +424,7 @@ void chip8::emulateCycle()
 	if (sound_timer > 0)
 	{
 		if (sound_timer == 1)
-			printf("BEEP!\n");
+			// TODO: Sound
 		--sound_timer;
 	}
 }
