@@ -9,11 +9,11 @@ Nothing special is needed other than SDL2.
 
 You can run it with:
 ```
-./chip8 <ROM file>
+./chip-8 <ROM file>
 ```
 
 ## TODO
-*	~~Fix SDL implementation~~ Done but still flickering screen
+*	~~Fix SDL implementation~~ Done
 *	Add audio
 *	Add function keys
 *	Add Super Chip-8 opcodes
