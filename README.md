@@ -13,7 +13,7 @@ You can run it with:
 ```
 
 ## TODO
-*	Fix SDL implementation
+*	~~Fix SDL implementation~~ Done but still flickering screen
 *	Add audio
 *	Add function keys
 *	Add Super Chip-8 opcodes
