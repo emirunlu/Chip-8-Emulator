@@ -6,19 +6,16 @@
 
 chip8 Chip8;
 int modifier = 10;
-int oglIdx = -1;
 bool quit = false;
 
 // Window size
 int display_width = SCREEN_WIDTH * modifier;
 int display_height = SCREEN_HEIGHT * modifier;
 
-void display();
-void reshape_window(GLsizei w, GLsizei h);
 
 typedef unsigned __int8 u8;
 u8 screenData[SCREEN_HEIGHT][SCREEN_WIDTH][3];
-void setupTexture();
+
 const unsigned char NCOLORS = 2;
 Uint32 palette[NCOLORS];
 
