@@ -4,6 +4,13 @@ chip8 Chip8;
 
 SDL_Window *window = nullptr;
 SDL_Renderer *renderer = nullptr;
+//Mix_Music *wave = NULL;
+
+//#define WAV_PATH "beep.wav"
+
+const Uint32 fps = 60;
+const Uint32 freq = 400;
+const Uint32 minframetime = 1000 / fps;
 
 static const uint8_t SCREEN_WIDTH = 64;
 static const uint8_t SCREEN_HEIGHT = 32;
@@ -32,17 +39,40 @@ uint8_t keymap[16] = {
 	SDLK_v,
 };
 
-void init_SDL()
+int init_SDL()
 {
-	// Initialize SDL Video 
+	// Initialize SDL subsystems(video and mixer) 
 	// TODO: Sound
-	SDL_Init(SDL_INIT_VIDEO);
+	SDL_Init(SDL_INIT_EVERYTHING);
 
 	window = SDL_CreateWindow("Chip8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 512, 256, NULL);
 
 	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
+	
+	//Initialize SDL_mixer
+	/*if( Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 4096 ) == -1 ) 
+		return -1; 
+	wave = Mix_LoadMUS(WAV_PATH);
+	if (wave == NULL)
+		return -1;
+	*/
+	return 0;
 }
-
+/*
+void play_audio(unsigned char sound_timer)
+{
+	if (sound_timer > 0)
+	{
+		if (Mix_PlayingMusic() == 0)
+			Mix_PlayMusic(wave, -1);
+	}
+	else
+	{
+		if (Mix_PlayingMusic() == 1)
+			Mix_HaltMusic();
+	}
+}
+*/
 int main(int argc, char **argv)
 {
 
@@ -54,6 +84,10 @@ int main(int argc, char **argv)
 
 	init_SDL();
 
+	Uint32 start_time;
+	Uint32 last_time;
+	Uint32 elapsed_time;
+
 	// Load game
 load:
 	if (!Chip8.loadApplication(argv[1]))
@@ -61,9 +95,13 @@ load:
 
 	SDL_Event e;
 	bool running = true;
+	float cycles = 0;
+	last_time = SDL_GetTicks();
 
 	// Emulation loop
 	while (running) {
+		start_time = SDL_GetTicks();
+		elapsed_time = start_time - last_time;
 
 		// Process SDL events
 		while (SDL_PollEvent(&e)) {
@@ -95,7 +133,8 @@ load:
 		}
 
 		Chip8.emulateCycle();
-		
+		//play_audio(Chip8.sound_timer);
+
 		// If draw occurred, redraw SDL screen
 		if (Chip8.drawFlag)
 		{
@@ -131,8 +170,11 @@ load:
 			SDL_RenderPresent(renderer);
 			Chip8.drawFlag = false;
 		}
-		// Sleep to slow down emulation speed
-		//std::this_thread::sleep_for(std::chrono::microseconds(1200));
+		// Limit frame rate
+		//if (SDL_GetTicks() - start_time < minframetime)
+		//	SDL_Delay(minframetime - (SDL_GetTicks() - start_time));
+
+		last_time = start_time;
 	}
 
 	SDL_Quit();

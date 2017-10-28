@@ -2,6 +2,7 @@
 #include <SDL_main.h>
 #include <SDL_render.h>
 #include <SDL_opengl.h> 
+#include <SDL_mixer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -25,6 +26,9 @@ public:
 	unsigned char  gfx[64 * 32];	// Total amount of pixels: 2048
 	unsigned char  key[16];
 
+	unsigned char  delay_timer;		// Delay timer
+	unsigned char  sound_timer;		// Sound timer	
+
 private:
 	unsigned short pc;				// Program counter
 	unsigned short opcode;			// Current opcode
@@ -34,9 +38,7 @@ private:
 	unsigned char  V[16];			// V-regs (V0-VF)
 	unsigned short stack[16];		// Stack (16 levels)
 	unsigned char  memory[4096];	// Memory (size = 4k)		
-
-	unsigned char  delay_timer;		// Delay timer
-	unsigned char  sound_timer;		// Sound timer		
+	
 
 	void init();
 };
