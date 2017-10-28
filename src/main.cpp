@@ -12,7 +12,6 @@ bool quit = false;
 int display_width = SCREEN_WIDTH * modifier;
 int display_height = SCREEN_HEIGHT * modifier;
 
-
 typedef unsigned __int8 u8;
 u8 screenData[SCREEN_HEIGHT][SCREEN_WIDTH][3];
 
@@ -20,27 +19,31 @@ const unsigned char NCOLORS = 2;
 Uint32 palette[NCOLORS];
 
 SDL_Window *window = nullptr;
-SDL_Surface *screen = nullptr;
+SDL_Texture *sdlTexture = nullptr;
+SDL_Renderer *renderer = nullptr;
+
+// Temporary pixel buffer
+uint32_t pixels[2048];
 
 // Chip8 Keypad
-const Uint32 KEY_0 = SDL_SCANCODE_KP_0;
-const Uint32 KEY_1 = SDL_SCANCODE_KP_1;
-const Uint32 KEY_2 = SDL_SCANCODE_KP_2;
-const Uint32 KEY_3 = SDL_SCANCODE_KP_3;
-const Uint32 KEY_4 = SDL_SCANCODE_KP_4;
-const Uint32 KEY_5 = SDL_SCANCODE_KP_5;
-const Uint32 KEY_6 = SDL_SCANCODE_KP_6;
-const Uint32 KEY_7 = SDL_SCANCODE_KP_7;
-const Uint32 KEY_8 = SDL_SCANCODE_KP_8;
-const Uint32 KEY_9 = SDL_SCANCODE_KP_9;
-const Uint32 KEY_A = SDL_SCANCODE_Q;
-const Uint32 KEY_B = SDL_SCANCODE_A;
-const Uint32 KEY_C = SDL_SCANCODE_Z;
-const Uint32 KEY_D = SDL_SCANCODE_W;
-const Uint32 KEY_E = SDL_SCANCODE_S;
-const Uint32 KEY_F = SDL_SCANCODE_X;
-
-const Uint32 KEY_EXIT = SDLK_ESCAPE;
+uint8_t keymap[16] = {
+	SDLK_x,
+	SDLK_1,
+	SDLK_2,
+	SDLK_3,
+	SDLK_q,
+	SDLK_w,
+	SDLK_e,
+	SDLK_a,
+	SDLK_s,
+	SDLK_d,
+	SDLK_z,
+	SDLK_c,
+	SDLK_4,
+	SDLK_r,
+	SDLK_f,
+	SDLK_v,
+};
 
 int init_SDL()
 {
@@ -49,40 +52,15 @@ int init_SDL()
 
 	window = SDL_CreateWindow("Chip8 Emulator", 100, 100, display_width, display_height, SDL_WINDOW_SHOWN);
 
-	screen = SDL_GetWindowSurface(window);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+	SDL_RenderSetLogicalSize(renderer, display_width, display_height);
+
+	SDL_Texture* sdlTexture = SDL_CreateTexture(renderer,
+		SDL_PIXELFORMAT_ARGB8888,
+		SDL_TEXTUREACCESS_STREAMING,
+		64, 32);
 
 	return 0;
-}
-
-void setup_palette()
-{
-	palette[0] = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
-	palette[1] = SDL_MapRGB(screen->format, 0xFF, 0xFF, 0xFF);
-}
-
-int setup_graphics()
-{
-	if (init_SDL())
-		return 1;
-	setup_palette();
-
-	return 0;
-}
-
-void render_SDL(unsigned char gfx[])
-{
-	SDL_Rect pixel = {0, 0, modifier, modifier};
-
-	for (int i = 0; i < SCREEN_WIDTH; i++)
-	{
-		pixel.x = i * modifier;
-		for (int j = 0; j < SCREEN_HEIGHT; j++)
-		{
-			pixel.y = j * modifier;
-			SDL_FillRect(screen, &pixel, palette[gfx[i*j]]);
-		}
-	}
-	SDL_UpdateWindowSurface(window);
 }
 
 void stop_SDL()
@@ -90,69 +68,6 @@ void stop_SDL()
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 }
-
-void update_key_reg(unsigned char key[])
-{
-	const Uint8 *keystates = SDL_GetKeyboardState(NULL);
-	key[0x0] = keystates[KEY_0];
-	key[0x1] = keystates[KEY_1];
-	key[0x2] = keystates[KEY_2];
-	key[0x3] = keystates[KEY_3];
-	key[0x4] = keystates[KEY_4];
-	key[0x5] = keystates[KEY_5];
-	key[0x6] = keystates[KEY_6];
-	key[0x7] = keystates[KEY_7];
-	key[0x8] = keystates[KEY_8];
-	key[0x9] = keystates[KEY_9];
-	key[0xA] = keystates[KEY_A];
-	key[0xB] = keystates[KEY_B];
-	key[0xC] = keystates[KEY_C];
-	key[0xD] = keystates[KEY_D];
-	key[0xE] = keystates[KEY_E];
-	key[0xF] = keystates[KEY_F];
-}
-
-int process_event(SDL_Event *e, chip8* Chip8)
-{
-	if (e->type == SDL_QUIT)
-		return 1;
-	if (!e->key.repeat)
-	{
-		if (e->type == SDL_KEYDOWN)
-		{
-			switch (e->key.keysym.sym)
-			{
-				/*
-				case KEY_A:
-					std::cout << "key Z pressed" << std::endl;
-				break;
-				*/
-			case KEY_EXIT:
-				return 1;
-				break;
-			default:
-				break;
-			}
-		}
-		/*
-		if (e->type == SDL_KEYUP)
-		{
-			switch (e->key.keysym.sym)
-			{
-				case KEY_A:
-					std::cout << "key Z unpressed" << std::endl;
-				break;
-				default:
-				break;
-			}
-		}
-		*/
-		if (e->type == SDL_KEYUP || e->type == SDL_KEYDOWN)
-			update_key_reg(Chip8->key);
-	}
-	return 0;
-}
-
 
 int main(int argc, char **argv)
 {
@@ -162,24 +77,68 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	init_SDL();
+
 	// Load game
+load:
 	if (!Chip8.loadApplication(argv[1]))
 		return 1;
 
-	// Setup OpenGL
-	SDL_Event e;
-	setup_graphics();
-	while (1) {
-		while (SDL_PollEvent(&e))
-		{
-			if (process_event(&e, &Chip8))
-				quit = true;
+	// Emulation loop
+	while (true) {
+		Chip8.emulateCycle();
+
+		// Process SDL events
+		SDL_Event e;
+		while (SDL_PollEvent(&e)) {
+			if (e.type == SDL_QUIT) exit(0);
+
+			// Process keydown events
+			if (e.type == SDL_KEYDOWN) {
+				if (e.key.keysym.sym == SDLK_ESCAPE)
+					exit(0);
+
+				if (e.key.keysym.sym == SDLK_F1)
+					goto load;      // *gasp*, a goto statement!
+									// Used to reset/reload ROM
+
+				for (int i = 0; i < 16; ++i) {
+					if (e.key.keysym.sym == keymap[i]) {
+						Chip8.key[i] = 1;
+					}
+				}
+			}
+			// Process keyup events
+			if (e.type == SDL_KEYUP) {
+				for (int i = 0; i < 16; ++i) {
+					if (e.key.keysym.sym == keymap[i]) {
+						Chip8.key[i] = 0;
+					}
+				}
+			}
 		}
 
-		render_SDL(Chip8.gfx);
+		// If draw occurred, redraw SDL screen
+		if (Chip8.drawFlag) {
+			Chip8.drawFlag = false;
 
+			// Store pixels in temporary buffer
+			for (int i = 0; i < 2048; ++i) {
+				uint8_t pixel = Chip8.gfx[i];
+				pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
+			}
+			// Update SDL texture
+			SDL_UpdateTexture(sdlTexture, NULL, pixels, 64 * sizeof(Uint32));
+			// Clear screen and render
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, sdlTexture, NULL, NULL);
+			SDL_RenderPresent(renderer);
+		}
+
+		// Sleep to slow down emulation speed
+		std::this_thread::sleep_for(std::chrono::microseconds(1200));
+		
 	}
-	
 
 	stop_SDL();
 	return 0;

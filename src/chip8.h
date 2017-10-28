@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include "stdint.h"
+
 #pragma warning (disable : 4996)
 class chip8 {
 public:
