@@ -20,6 +20,10 @@ public:
 	bool drawFlag;
 
 	void emulateCycle();
+	void fetch();
+	void execute();
+	void cpuARITHMETIC();
+
 	bool loadApplication(const char * filename);
 
 	// Chip8

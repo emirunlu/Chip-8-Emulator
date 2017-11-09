@@ -117,6 +117,60 @@ void chip8::init()
 	srand(time(NULL));
 }
 
+
+// FUNCTION POINTER TEST START  the green place computed goto for efficient displatch tables
+
+void chip8::fetch()
+{
+	opcode = ((memory->readmem(PC)<<8) + memory->readmem(PC+1))
+	PC += 2;
+}
+
+void chip8::execute()
+{
+	fetch();
+	Chip8Table[(opcode&0xF000)>>12]();
+}
+
+void chip8::cpuNULL() 
+{
+	// Do Nothing FOR NOW
+}
+
+void chip8::cpu00E0() 
+{
+	for (int i = 0; i < 2048; ++i)
+		gfx[i] = 0x0;
+	drawFlag = true;
+	pc += 2;
+}
+
+void chip8::cpu00EE() 
+{
+	--sp;			// 16 levels of stack, decrease stack pointer to prevent overwrite
+	pc = stack[sp];	// Put the stored return address from the stack back into the program counter					
+	pc += 2;		// Don't forget to increase the program counter!
+}
+void chip8::cpuARITHMETIC(){
+	Chip8Arithmetic[(opcode&0x000F)]();
+}
+
+void (*Chip8Table[17]) = 
+{
+	cpuARITHMETIC, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, 
+	cpuARITHMETIC, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuARITHMETIC,
+	cpuARITHMETIC
+};
+
+void (*Chip8Arithmetic[16]) = 
+{
+	cpu00E0, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL,
+	cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL, cpuNULL
+};
+
+
+// FUNCTION POINTER TEST END
+
 void chip8::emulateCycle()
 {
 	// Fetch opcode | 2 bytes
@@ -190,27 +244,27 @@ void chip8::emulateCycle()
 	case 0x8000:
 		switch (opcode & 0x000F)
 		{
-		case 0x0000: // 0x8XY0: Sets VX to the value of VY
+		case 0x0000: // 0x8XY0: Sets VX to the value of VY   0
 			V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4];
 			pc += 2;
 			break;
 
-		case 0x0001: // 0x8XY1: Sets VX to "VX OR VY"
+		case 0x0001: // 0x8XY1: Sets VX to "VX OR VY" 1
 			V[(opcode & 0x0F00) >> 8] |= V[(opcode & 0x00F0) >> 4];
 			pc += 2;
 			break;
 
-		case 0x0002: // 0x8XY2: Sets VX to "VX AND VY"
+		case 0x0002: // 0x8XY2: Sets VX to "VX AND VY" 2 
 			V[(opcode & 0x0F00) >> 8] &= V[(opcode & 0x00F0) >> 4];
 			pc += 2;
 			break;
 
-		case 0x0003: // 0x8XY3: Sets VX to "VX XOR VY"
+		case 0x0003: // 0x8XY3: Sets VX to "VX XOR VY" 3
 			V[(opcode & 0x0F00) >> 8] ^= V[(opcode & 0x00F0) >> 4];
 			pc += 2;
 			break;
 
-		case 0x0004: // 0x8XY4: Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't					
+		case 0x0004: // 0x8XY4: Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't		4			
 			if (V[(opcode & 0x00F0) >> 4] > (0xFF - V[(opcode & 0x0F00) >> 8]))
 				V[0xF] = 1; //carry
 			else
@@ -311,14 +365,14 @@ void chip8::emulateCycle()
 	case 0xE000:
 		switch (opcode & 0x00FF)
 		{
-		case 0x009E: // EX9E: Skips the next instruction if the key stored in VX is pressed
+		case 0x009E: // EX9E: Skips the next instruction if the key stored in VX is pressed  14
 			if (key[V[(opcode & 0x0F00) >> 8]] != 0)
 				pc += 4;
 			else
 				pc += 2;
 			break;
 
-		case 0x00A1: // EXA1: Skips the next instruction if the key stored in VX isn't pressed
+		case 0x00A1: // EXA1: Skips the next instruction if the key stored in VX isn't pressed  1
 			if (key[V[(opcode & 0x0F00) >> 8]] == 0)
 				pc += 4;
 			else
@@ -333,12 +387,12 @@ void chip8::emulateCycle()
 	case 0xF000:
 		switch (opcode & 0x00FF)
 		{
-		case 0x0007: // FX07: Sets VX to the value of the delay timer
+		case 0x0007: // FX07: Sets VX to the value of the delay timer 7
 			V[(opcode & 0x0F00) >> 8] = delay_timer;
 			pc += 2;
 			break;
 
-		case 0x000A: // FX0A: A key press is awaited, and then stored in VX		
+		case 0x000A: // FX0A: A key press is awaited, and then stored in VX 10
 		{
 			bool keyPress = false;
 
